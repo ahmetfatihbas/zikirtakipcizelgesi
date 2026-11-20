@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Zikir Takip</title>
+<style>
+  :root{
+    --bg1:#0f2b2a; --bg2:#1d4e46; --card:rgba(255,255,255,.08);
+    --gold:#e6c36a; --text:#f4f1e8; --done:#4caf8a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0; min-height:100vh; color:var(--text);
+    font-family:'Segoe UI',Roboto,Arial,sans-serif;
+    background:linear-gradient(160deg,var(--bg1),var(--bg2) 60%,#0b1f1e);
+    background-attachment:fixed;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; opacity:.06; pointer-events:none;
+    background-image:radial-gradient(circle at 20% 20%,#fff 1px,transparent 1px),
+                     radial-gradient(circle at 70% 60%,#fff 1px,transparent 1px);
+    background-size:46px 46px,70px 70px;
+  }
+  header{text-align:center;padding:18px 16px 8px;max-width:720px;margin:0 auto}
+  header h1{margin:0;font-size:26px;color:var(--gold);letter-spacing:1px}
+  .nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px}
+  .nav button{width:44px;height:44px;border-radius:50%;border:2px solid var(--gold);background:rgba(0,0,0,.25);color:var(--gold);font-size:24px;line-height:1;cursor:pointer}
+  .nav button:disabled{opacity:.25;cursor:default}
+  #date{min-width:200px;font-size:15px;font-weight:600}
+  #sub{font-size:12px;opacity:.85;margin-top:6px;min-height:16px}
+  #sub button{background:none;border:1px solid var(--gold);color:var(--gold);border-radius:14px;padding:2px 10px;font-size:12px;cursor:pointer;margin-left:6px}
+  .progress{height:8px;border-radius:8px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:10px}
+  .progress div{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--done));transition:width .4s}
+  .tabs{display:flex;gap:8px;justify-content:center;margin-top:12px}
+  .tabs button{flex:1;max-width:160px;height:40px;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:var(--text);font-size:15px;cursor:pointer}
+  .tabs button.on{background:var(--gold);color:#16302d;border-color:var(--gold);font-weight:700}
+  .settings{margin-top:10px;font-size:12px;opacity:.9}
+  .settings select{background:rgba(0,0,0,.3);color:var(--text);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:5px 8px;font-size:13px}
+  main{max-width:720px;margin:0 auto;padding:6px 14px 60px}
+  h2{color:var(--gold);font-size:16px;margin:22px 4px 8px;border-bottom:1px solid rgba(230,195,106,.3);padding-bottom:6px}
+  h2 small{font-weight:400;font-size:12px;opacity:.75;margin-left:8px}
+  .row{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    background:var(--card);backdrop-filter:blur(6px);
+    border:1px solid rgba(255,255,255,.1);border-radius:14px;
+    padding:12px 14px;margin-bottom:10px;transition:.25s;
+  }
+  .row.done{background:rgba(76,175,138,.18);border-color:var(--done)}
+  .no{min-width:26px;text-align:center;color:var(--gold);font-weight:700}
+  .txt{flex:1;font-size:15px;line-height:1.4;min-width:140px}
+  .goal{font-size:12px;opacity:.7;white-space:nowrap}
+  .counter{
+    min-width:78px;height:52px;border-radius:12px;border:2px solid var(--gold);
+    background:rgba(0,0,0,.25);color:var(--text);font-size:20px;font-weight:700;
+    cursor:pointer;user-select:none;transition:.1s;
+  }
+  .counter:active{transform:scale(.93)}
+  .row.done .counter{border-color:var(--done);color:var(--done);cursor:default}
+  .reset{background:none;border:none;color:var(--text);opacity:.5;font-size:18px;cursor:pointer;padding:4px}
+  .reset:hover{opacity:1}
+  .range{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;width:100%;justify-content:flex-end}
+  .range label{display:flex;flex-direction:column;font-size:11px;opacity:.85;gap:3px}
+  .range input{
+    width:84px;height:44px;border-radius:10px;border:2px solid var(--gold);
+    background:rgba(0,0,0,.25);color:var(--text);font-size:18px;font-weight:700;text-align:center;
+  }
+  .range input:focus{outline:none;border-color:#fff}
+  .range .dash{padding-bottom:10px;opacity:.6}
+  .status{
+    height:44px;padding:0 16px;border-radius:12px;border:2px solid #c9776b;
+    background:rgba(201,119,107,.15);color:#f0b3aa;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .status.on{border-color:var(--done);background:rgba(76,175,138,.25);color:var(--done)}
+  .resetall{display:block;margin:24px auto 0;padding:10px 22px;border-radius:24px;border:1px solid var(--gold);background:none;color:var(--gold);cursor:pointer}
+  /* Rapor */
+  .big{text-align:center;margin:18px 0 6px}
+  .big .pct{font-size:52px;font-weight:700;color:var(--gold);line-height:1}
+  .big .lbl{font-size:13px;opacity:.8;margin-top:4px}
+  .rrow{background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+  .rrow .top{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+  .rrow .top b{color:var(--gold);white-space:nowrap}
+  .rrow .meta{font-size:12px;opacity:.75;margin-top:4px}
+  .mini{height:6px;border-radius:6px;background:rgba(255,255,255,.12);margin-top:8px;overflow:hidden}
+  .mini div{height:100%;background:var(--done)}
+</style>
+</head>
+<body>
+<header>
+  <h1>☪ Zikir Takip</h1>
+  <div class="nav"><button id="prev" aria-label="Önceki gün">‹</button><div id="date"></div><button id="next" aria-label="Sonraki gün">›</button></div>
+  <div id="sub"></div>
+  <div class="progress" id="progWrap"><div id="bar"></div></div>
+  <div class="tabs"><button id="tTrack">Takip</button><button id="tRep">Rapor</button></div>
+  <div class="settings"><label>Geri bildirim:
+    <select id="mode">
+      <option value="both">Ses + Titreşim</option>
+      <option value="sound">Sadece ses</option>
+      <option value="vib">Sadece titreşim</option>
+      <option value="off">Sessiz</option>
+    </select></label></div>
+</header>
+<main id="app"></main>
+
+<script>
+// type: d = günlük, s = sabah/akşam (günlük), w = haftalık sayaç, r = haftalık aralık (unit: Bab / Sayfa)
+const ITEMS = [
+ {no:"1",t:"Lâ ilâhe illâ ente subhâneke innî kuntu minez zâlimîn",g:33,type:"d"},
+ {no:"2",t:"Rabbi innî messeniyed durru ve ente erhamur râhimîn",g:33,type:"d"},
+ {no:"3",t:"Hasbiyallâhu lâ ilâhe illâ hûve, aleyhi tevekkeltu ve huve rabbul arşil azîm",g:33,type:"d"},
+ {no:"4",t:"Hasbunallahü ve ni'mel vekil",g:33,type:"d"},
+ {no:"5",t:"Lâ havle ve lâ kuvvete illâ billâhil-aliyyil-azîm",g:33,type:"d"},
+ {no:"6",t:"Ya Bâkî Ente'l-Bâkî – Ya Bâkî Ente'l-Bâkî",g:33,type:"d"},
+ {no:"7",t:"Bismillâhillezi yedurru ma'asmihi şey'ün fil erdı ve lâ fissemâi ve hüves-semi'ul alim. (sabah ve akşam)",g:3,type:"s"},
+ {no:"8",t:"Subhanallahi ve Bihamdihi Subhanallahil Azim (sabah ve akşam)",g:100,type:"s"},
+ {no:"9",t:"Lâ ilâhe illallâhül melikül hakkul mübîn Muhammedün rasûlüllâhi sâdikul va'dil emîn.",g:33,type:"d"},
+ {no:"#",t:"Kelime'i tevhid",g:100,type:"d"},
+ {no:"#",t:"Ayetel kürsi",g:18,type:"d"},
+ {no:"#",t:"Ya Kuddüs",g:170,type:"d"},
+ {no:"#",t:"Ya latif",g:129,type:"d"},
+ {no:"#",t:"Salavat",g:100,type:"d"},
+ {no:"#",t:"Estagfirullah",g:100,type:"d"},
+ {no:"#",t:"Cevşen",unit:"Bab",type:"r"},
+ {no:"#",t:"Delail-i Nur",unit:"Sayfa",type:"r"},
+ {no:"#",t:"Evrad-ı Kutsiye",unit:"Sayfa",type:"r"},
+ {no:"#",t:"Kaside-i Celcelûtiye",unit:"Sayfa",type:"r"},
+ {no:"#",t:"İhlas",g:100,type:"w"},
+ {no:"#",t:"İnşirah Suresi",g:11,type:"w"},
+ {no:"#",t:"Salat-ı Tefriciye",g:11,type:"w"},
+ {no:"#",t:"Ya Fettah",g:489,type:"w"},
+ {no:"#",t:"Ya Şafi",g:391,type:"w"}
+];
+const isWeekly = it => it.type==="w" || it.type==="r";
+
+/* ---------- Tarih yardımcıları ---------- */
+const pad=n=>String(n).padStart(2,"0");
+const dk=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const monday=d=>addDays(d,-((d.getDay()+6)%7));
+const TODAY=()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate())};
+const short=d=>d.toLocaleDateString("tr-TR",{day:"numeric",month:"short"});
+
+/* ---------- Kayıt ---------- */
+const KEY="zikirState.v3";
+function load(){
+  let s=null;
+  try{ s=JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){}
+  if(!s){
+    s={days:{},weeks:{},settings:{mode:"both"}};
+    try{ // eski sürümden (v2) aktar
+      const old=JSON.parse(localStorage.getItem("zikirState.v2")||"null");
+      if(old){
+        const d={},w={};
+        ITEMS.forEach((it,i)=>{
+          if(!isWeekly(it)){ if(old["c"+i]) d["c"+i]=old["c"+i]; }
+          else { if(old["c"+i]) w["c"+i]=old["c"+i]; if(old["r"+i]) w["r"+i]=old["r"+i]; }
+        });
+        if(old.day) s.days[old.day]=d;
+        if(old.week) s.weeks[old.week]=w;
+      }
+    }catch(e){}
+  }
+  s.days=s.days||{}; s.weeks=s.weeks||{}; s.settings=s.settings||{mode:"both"};
+  return s;
+}
+let state=load();
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
+
+function storeFor(it,date){ return isWeekly(it) ? [state.weeks, dk(monday(date))] : [state.days, dk(date)]; }
+function getVal(it,i,date){
+  const [s,k]=storeFor(it,date); const r=s[k]||{};
+  return it.type==="r" ? (r["r"+i]||{a:"",b:"",done:false}) : (r["c"+i]||0);
+}
+function setVal(it,i,date,v){
+  const [s,k]=storeFor(it,date); s[k]=s[k]||{};
+  if(it.type==="r") s[k]["r"+i]=v; else s[k]["c"+i]=v;
+  save();
+}
+function delVal(it,i,date){
+  const [s,k]=storeFor(it,date);
+  if(s[k]){ delete s[k]["c"+i]; delete s[k]["r"+i]; }
+  save();
+}
+function isDone(it,i,date){
+  const v=getVal(it,i,date);
+  return it.type==="r" ? !!v.done : v>=it.g;
+}
+
+/* ---------- Ses ve titreşim ---------- */
+let ac=null;
+function tone(f,t0,dur,vol){
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type="sine"; o.frequency.value=f;
+  g.gain.setValueAtTime(vol,ac.currentTime+t0);
+  g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+t0+dur);
+  o.connect(g); g.connect(ac.destination);
+  o.start(ac.currentTime+t0); o.stop(ac.currentTime+t0+dur+0.02);
+}
+function feedback(complete){
+  const m=state.settings.mode;
+  if(m==="both"||m==="sound"){
+    try{
+      ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+      if(ac.state==="suspended") ac.resume();
+      if(complete){ tone(660,0,.18,.3); tone(990,.18,.32,.3); }
+      else tone(880,0,.06,.25);
+    }catch(e){}
+  }
+  if(m==="both"||m==="vib"){
+    try{ if(navigator.vibrate) navigator.vibrate(complete?[60,50,60]:15); }catch(e){}
+  }
+}
+
+/* ---------- Görünüm durumu ---------- */
+let view=TODAY();
+let tab="track";   // track | report
+let rpt="week";    // week | month
+
+function renderHeader(){
+  const t=TODAY(), isToday=dk(view)===dk(t);
+  document.getElementById("date").textContent=view.toLocaleDateString("tr-TR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  document.getElementById("next").disabled=isToday;
+  const sub=document.getElementById("sub"); sub.innerHTML="";
+  if(!isToday){
+    sub.appendChild(document.createTextNode("Geçmiş gün — işaretleyebilirsin"));
+    const b=document.createElement("button"); b.textContent="Bugüne dön";
+    b.onclick=()=>{view=TODAY();render();}; sub.appendChild(b);
+  }
+  document.getElementById("tTrack").className=tab==="track"?"on":"";
+  document.getElementById("tRep").className=tab==="report"?"on":"";
+  document.getElementById("progWrap").style.display=tab==="track"?"block":"none";
+  document.getElementById("mode").value=state.settings.mode||"both";
+}
+
+/* ---------- Takip ekranı ---------- */
+function renderTrack(app){
+  let total=0,doneCount=0;
+  const groups=[["Günlük",["d"]],["Sabah ve Akşam",["s"]],["Haftalık",["r","w"]]];
+  groups.forEach(([title,types])=>{
+    const h=document.createElement("h2"); h.textContent=title;
+    if(types.includes("r")){
+      const m=monday(view);
+      const sm=document.createElement("small"); sm.textContent=short(m)+" – "+short(addDays(m,6));
+      h.appendChild(sm);
+    }
+    app.appendChild(h);
+    types.forEach(type=>{
+      ITEMS.forEach((it,i)=>{
+        if(it.type!==type) return;
+        total++;
+        const row=document.createElement("div");
+        const done=isDone(it,i,view); if(done) doneCount++;
+
+        if(type==="r"){
+          const r=getVal(it,i,view);
+          row.className="row"+(done?" done":"");
+          row.innerHTML=`<div class="no">${it.no}</div><div class="txt">${it.t}</div>`;
+          const box=document.createElement("div"); box.className="range";
+          const mk=(label,key)=>{
+            const l=document.createElement("label"); l.textContent=it.unit+" "+label;
+            const inp=document.createElement("input"); inp.type="number"; inp.inputMode="numeric"; inp.min="0";
+            inp.value=r[key]; inp.placeholder="—";
+            inp.oninput=()=>{ const cur=getVal(it,i,view); cur[key]=inp.value; setVal(it,i,view,cur); };
+            l.appendChild(inp); return l;
+          };
+          box.appendChild(mk("başlangıç","a"));
+          const dash=document.createElement("span"); dash.className="dash"; dash.textContent="–"; box.appendChild(dash);
+          box.appendChild(mk("bitiş","b"));
+          const st=document.createElement("button"); st.className="status"+(r.done?" on":"");
+          st.textContent=r.done?"✓ Yapıldı":"Yapılmadı";
+          st.onclick=()=>{ const cur=getVal(it,i,view); cur.done=!cur.done; setVal(it,i,view,cur); if(cur.done) feedback(true); render(); };
+          box.appendChild(st);
+          row.appendChild(box);
+        } else {
+          const c=getVal(it,i,view);
+          row.className="row"+(done?" done":"");
+          row.innerHTML=`<div class="no">${it.no}</div><div class="txt">${it.t}</div><div class="goal">Hedef ${it.g}</div>`;
+          const btn=document.createElement("button"); btn.className="counter";
+          btn.textContent=done?"✓ "+c:c;
+          btn.onclick=()=>{
+            const cur=getVal(it,i,view);
+            if(cur<it.g){ setVal(it,i,view,cur+1); feedback(cur+1>=it.g); render(); }
+          };
+          const rs=document.createElement("button"); rs.className="reset"; rs.textContent="↺"; rs.title="Sıfırla";
+          rs.onclick=()=>{ delVal(it,i,view); render(); };
+          row.appendChild(btn); row.appendChild(rs);
+        }
+        app.appendChild(row);
+      });
+    });
+  });
+  document.getElementById("bar").style.width=(total?doneCount/total*100:0)+"%";
+  const all=document.createElement("button"); all.className="resetall"; all.textContent="Bu günü ve haftayı sıfırla";
+  all.onclick=()=>{
+    if(confirm("Seçili günün ve haftanın tüm kayıtları sıfırlansın mı?")){
+      ITEMS.forEach((it,i)=>delVal(it,i,view)); render();
+    }
+  };
+  app.appendChild(all);
+}
+
+/* ---------- Rapor ekranı ---------- */
+function period(kind){
+  let start,end;
+  if(kind==="week"){ start=monday(view); end=addDays(start,6); }
+  else { start=new Date(view.getFullYear(),view.getMonth(),1); end=new Date(view.getFullYear(),view.getMonth()+1,0); }
+  const t=TODAY(); const last=end>t?t:end;
+  const days=[]; for(let d=new Date(start); d<=last; d=addDays(d,1)) days.push(new Date(d));
+  const weeks=[]; let m=monday(start); if(m<start) m=addDays(m,7);
+  for(; m<=last; m=addDays(m,7)) weeks.push(new Date(m));
+  return {start,end,days,weeks};
+}
+
+function renderReport(app){
+  const tg=document.createElement("div"); tg.className="tabs";
+  [["week","Hafta"],["month","Ay"]].forEach(([k,l])=>{
+    const b=document.createElement("button"); b.textContent=l; if(rpt===k) b.className="on";
+    b.onclick=()=>{rpt=k;render();}; tg.appendChild(b);
+  });
+  app.appendChild(tg);
+
+  const P=period(rpt);
+  let units=0,doneUnits=0; const rows=[];
+  ITEMS.forEach((it,i)=>{
+    const w=isWeekly(it);
+    const dates=w?P.weeks:P.days;
+    let done=0,sum=0;
+    dates.forEach(d=>{ if(isDone(it,i,d)) done++; if(it.type!=="r") sum+=getVal(it,i,d); });
+    units+=dates.length; doneUnits+=done;
+    let meta="";
+    if(it.type==="r"){
+      if(rpt==="week" && P.weeks.length){
+        const v=getVal(it,i,P.weeks[0]);
+        if(v.a!==""||v.b!=="") meta=`${it.unit} ${v.a!==""?v.a:"?"} – ${v.b!==""?v.b:"?"}`;
+      }
+    } else meta="Toplam: "+sum;
+    rows.push({name:it.t,done,n:dates.length,unit:w?"hafta":"gün",meta});
+  });
+  const pct=units?Math.round(doneUnits/units*100):0;
+
+  const big=document.createElement("div"); big.className="big";
+  big.innerHTML=`<div class="pct">%${pct}</div><div class="lbl">${short(P.start)} – ${short(P.end)} · genel tamamlama</div>`;
+  app.appendChild(big);
+
+  rows.forEach(r=>{
+    const el=document.createElement("div"); el.className="rrow";
+    const p=r.n?r.done/r.n*100:0;
+    el.innerHTML=`<div class="top"><span>${r.name}</span><b>${r.n?r.done+"/"+r.n+" "+r.unit:"—"}</b></div>`+
+      (r.meta?`<div class="meta">${r.meta}</div>`:"")+
+      `<div class="mini"><div style="width:${p}%"></div></div>`;
+    app.appendChild(el);
+  });
+}
+
+/* ---------- Ana çizim ---------- */
+function render(){
+  renderHeader();
+  const app=document.getElementById("app"); app.innerHTML="";
+  if(tab==="track") renderTrack(app); else renderReport(app);
+}
+
+document.getElementById("prev").onclick=()=>{ view=addDays(view,-1); render(); };
+document.getElementById("next").onclick=()=>{ if(dk(view)<dk(TODAY())){ view=addDays(view,1); render(); } };
+document.getElementById("tTrack").onclick=()=>{ tab="track"; render(); };
+document.getElementById("tRep").onclick=()=>{ tab="report"; render(); };
+document.getElementById("mode").onchange=e=>{ state.settings.mode=e.target.value; save(); feedback(false); };
+render();
+</script>
+</body>
+</html>
